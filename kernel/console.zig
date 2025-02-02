@@ -39,6 +39,13 @@ pub const Console = struct {
                             };
                             con.write_bytes(arg_value_d);
                         },
+                        'x' => {
+                            var b: [32]u8 = undefined;
+                            const arg_value_d = std.fmt.bufPrint(&b, "{x}", .{arg_value}) catch {
+                                unreachable;
+                            };
+                            con.write_bytes(arg_value_d);
+                        },
                         else => @compileError("unsupported format specifier"),
                     }
                     i += 2;

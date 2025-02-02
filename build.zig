@@ -1,10 +1,12 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) !void {
+    const optimize = b.standardOptimizeOption(.{});
+
     const kernel = b.addExecutable(.{
         .name = "kernel.elf",
         .root_source_file = b.path("kernel/main.zig"),
-        .optimize = .Debug, // can not change because of boot.s ?
+        .optimize = optimize,
         .target = b.resolveTargetQuery(.{
             .cpu_arch = .riscv32,
             .os_tag = .freestanding,
@@ -13,7 +15,6 @@ pub fn build(b: *std.Build) !void {
         }),
         .strip = false,
     });
-    kernel.addAssemblyFile(b.path("kernel/boot.s"));
     kernel.setLinkerScript(b.path("kernel/linker_rv32.ld"));
     b.installArtifact(kernel);
 
