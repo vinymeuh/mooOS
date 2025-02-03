@@ -11,7 +11,6 @@ pub fn build(b: *std.Build) !void {
             .cpu_arch = .riscv32,
             .os_tag = .freestanding,
             .abi = .none,
-            .cpu_features_add = std.Target.riscv.featureSet(&.{.zihintpause}),
         }),
         .strip = false,
     });

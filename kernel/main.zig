@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const hwinfo = @import("hwinfo.zig");
+const kerneltrap = @import("kerneltrap.zig");
 const riscv = @import("riscv.zig");
 const Console = @import("console.zig").Console;
 
@@ -57,7 +58,9 @@ export fn kmain(boot_hartid: usize, dtb_addr: usize) noreturn {
         @intFromPtr(kernel_size_of_bss) / 1024,
     });
 
-    //asm volatile ("unimp");
+    kerneltrap.init_hart();
+    asm volatile ("unimp");
+
     while (true) {
         riscv.wfi();
     }
