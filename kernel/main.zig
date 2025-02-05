@@ -3,10 +3,12 @@ const builtin = @import("builtin");
 
 const hwinfo = @import("hwinfo.zig");
 const kerneltrap = @import("kerneltrap.zig");
+const mem = @import("mem.zig");
 const riscv = @import("riscv.zig");
 const Console = @import("console.zig").Console;
 
 var console: Console = undefined;
+var page_allocator: mem.BumpAllocator = undefined;
 
 const mooOS_version = std.SemanticVersion{ .major = 0, .minor = 0, .patch = 0 };
 
@@ -49,8 +51,9 @@ export fn kmain(boot_hartid: usize, dtb_addr: usize) noreturn {
         builtin.zig_version_string,
         std.enums.tagName(std.builtin.OptimizeMode, builtin.mode).?,
     });
+    const ram_available: usize = hwinfo.ram_size - (@intFromPtr(free_ram_start) - hwinfo.dram_base);
     console.write("Memory: {d}K/{d}K available ({d}K kernel code, {d}K data, {d}K rodata, {d}K bss)\n", .{
-        (hwinfo.ram_size - (@intFromPtr(free_ram_start) - hwinfo.dram_base)) / 1024,
+        ram_available / 1024,
         hwinfo.ram_size / 1024,
         @intFromPtr(kernel_size_of_text) / 1024,
         @intFromPtr(kernel_size_of_data) / 1024,
@@ -59,7 +62,19 @@ export fn kmain(boot_hartid: usize, dtb_addr: usize) noreturn {
     });
 
     kerneltrap.init_hart();
-    asm volatile ("unimp");
+    // asm volatile ("unimp");
+
+    console.write("Free RAM start at 0x{x} with {d} pages available\n", .{
+        @intFromPtr(free_ram_start),
+        ram_available / mem.page_size,
+    });
+    page_allocator = mem.BumpAllocator.init(free_ram_start, ram_available);
+
+    const alloc1 = page_allocator.allocPages(1);
+    console.write("alloc1.ptr=0x{x}, alloc1.len={d}\n", .{ @intFromPtr(alloc1.ptr), alloc1.len });
+    const alloc2 = page_allocator.allocPages(10);
+    console.write("alloc2.ptr=0x{x}, alloc2.len={d}\n", .{ @intFromPtr(alloc2.ptr), alloc2.len });
+    console.write("{d} pages used\n", .{page_allocator.allocated / mem.page_size});
 
     while (true) {
         riscv.wfi();
