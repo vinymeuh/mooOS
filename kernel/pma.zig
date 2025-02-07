@@ -10,10 +10,15 @@ pub const BumpAllocator = struct {
     allocated: usize,
 
     pub fn init(heap_start: [*]u8, heap_size: usize) BumpAllocator {
+        // ensure heap_start is page-aligned
+        const heap_start_aligned: [*]u8 = @ptrFromInt(alignUp(@intFromPtr(heap_start)));
+        // round down heap_size to the nearest multiple of page_size
+        const heap_size_rounded = ((heap_size - (heap_start_aligned - heap_start)) / page_size) * page_size;
+
         return .{
             .lock = Spinlock.init(),
-            .heap_start = @ptrFromInt(alignUp(@intFromPtr(heap_start))),
-            .heap_size = (heap_size / page_size) * page_size, // round down heap_size to the nearest multiple of page_size
+            .heap_start = heap_start_aligned,
+            .heap_size = heap_size_rounded,
             .allocated = 0,
         };
     }
