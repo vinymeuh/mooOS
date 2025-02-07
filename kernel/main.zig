@@ -3,12 +3,12 @@ const builtin = @import("builtin");
 
 const hwinfo = @import("hwinfo.zig");
 const kerneltrap = @import("kerneltrap.zig");
-const mem = @import("mem.zig");
+const pma = @import("pma.zig");
 const riscv = @import("riscv.zig");
 const Console = @import("console.zig").Console;
 
 var console: Console = undefined;
-var page_allocator: mem.BumpAllocator = undefined;
+var pma_allocator: pma.BumpAllocator = undefined;
 
 const mooOS_version = std.SemanticVersion{ .major = 0, .minor = 0, .patch = 0 };
 
@@ -51,6 +51,12 @@ export fn kmain(boot_hartid: usize, dtb_addr: usize) noreturn {
         builtin.zig_version_string,
         std.enums.tagName(std.builtin.OptimizeMode, builtin.mode).?,
     });
+
+    // Kernel Trap Handler
+    kerneltrap.init_hart();
+    // asm volatile ("unimp");
+
+    // Physical Memory Allocator
     const ram_available: usize = hwinfo.ram_size - (@intFromPtr(free_ram_start) - hwinfo.dram_base);
     console.write("Memory: {d}K/{d}K available ({d}K kernel code, {d}K data, {d}K rodata, {d}K bss)\n", .{
         ram_available / 1024,
@@ -61,20 +67,16 @@ export fn kmain(boot_hartid: usize, dtb_addr: usize) noreturn {
         @intFromPtr(kernel_size_of_bss) / 1024,
     });
 
-    kerneltrap.init_hart();
-    // asm volatile ("unimp");
-
+    pma_allocator = pma.BumpAllocator.init(free_ram_start, ram_available);
     console.write("Free RAM start at 0x{x} with {d} pages available\n", .{
-        @intFromPtr(free_ram_start),
-        ram_available / mem.page_size,
+        @intFromPtr(pma_allocator.heap_start),
+        pma_allocator.pages_total(),
     });
-    page_allocator = mem.BumpAllocator.init(free_ram_start, ram_available);
 
-    const alloc1 = page_allocator.allocPages(1);
+    const alloc1 = pma_allocator.allocPages(1);
     console.write("alloc1.ptr=0x{x}, alloc1.len={d}\n", .{ @intFromPtr(alloc1.ptr), alloc1.len });
-    const alloc2 = page_allocator.allocPages(10);
+    const alloc2 = pma_allocator.allocPages(10);
     console.write("alloc2.ptr=0x{x}, alloc2.len={d}\n", .{ @intFromPtr(alloc2.ptr), alloc2.len });
-    console.write("{d} pages used\n", .{page_allocator.allocated / mem.page_size});
 
     while (true) {
         riscv.wfi();

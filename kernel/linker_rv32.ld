@@ -29,7 +29,7 @@ SECTIONS
     . += 128 * 1024; /* 128KB */
     __stack_top = .;
 
-    . = ALIGN(4096); /* aligned to a 4KB boundary */
+    . = ALIGN(4096); /* aligned to a page boundary */
     __free_ram_start = .;
   
     PROVIDE(__kernel_size_of_text = SIZEOF(.text));

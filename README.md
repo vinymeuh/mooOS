@@ -21,6 +21,8 @@ My first milestone is to reach **user mode** and launch a basic shell.
 * [x] Boot and switch to Zig
 * [x] Write messages to consoles with OpenSBI
 * [x] Kernel panic handler
+* [x] Kernel trap handler (exception)
+* [x] Physical memory allocator
 
 ## 📚 References and inspirations
 

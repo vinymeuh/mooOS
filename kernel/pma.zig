@@ -1,3 +1,4 @@
+/// Physical Memory Allocator
 const Spinlock = @import("lock.zig").Spinlock;
 
 pub const page_size: usize = 4096;
@@ -11,8 +12,8 @@ pub const BumpAllocator = struct {
     pub fn init(heap_start: [*]u8, heap_size: usize) BumpAllocator {
         return .{
             .lock = Spinlock.init(),
-            .heap_start = heap_start, // @TODO: ensure heap_start is aligned
-            .heap_size = heap_size, // @TODO: ensure heap_size is a multiple of page_size
+            .heap_start = @ptrFromInt(alignUp(@intFromPtr(heap_start))),
+            .heap_size = (heap_size / page_size) * page_size, // round down heap_size to the nearest multiple of page_size
             .allocated = 0,
         };
     }
@@ -31,4 +32,20 @@ pub const BumpAllocator = struct {
 
         return chunk;
     }
+
+    pub inline fn pages_total(self: BumpAllocator) usize {
+        return self.heap_size / page_size;
+    }
+
+    pub inline fn pages_used(self: BumpAllocator) usize {
+        return self.allocated / page_size;
+    }
+
+    pub inline fn pages_free(self: BumpAllocator) usize {
+        return (self.heap_size - self.heap_allocated) / page_size;
+    }
 };
+
+inline fn alignUp(addr: usize) usize {
+    return (addr + page_size - 1) & ~(page_size - 1);
+}
